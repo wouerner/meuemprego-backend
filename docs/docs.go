@@ -305,6 +305,8 @@ var SwaggerInfo = &swag.Spec{
 	Description:      "API RESTful em Go com autenticação JWT, PostgreSQL e Chi Router.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
+	LeftDelim:        "{{",
+	RightDelim:       "}}",
 }
 
 func init() {

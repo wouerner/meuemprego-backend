@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/wouerner/runter-backend/internal/config"
 	"github.com/wouerner/runter-backend/internal/domain"
-	"github.com/wouerner/runter-backend/internal/repository"
 	"github.com/wouerner/runter-backend/internal/service"
 	"golang.org/x/crypto/bcrypt"
 )

@@ -54,8 +54,24 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	authService := service.NewAuthService(userRepo, cfg)
 
+	candidateRepo := repository.NewCandidateRepository(db)
+	candidateService := service.NewCandidateService(candidateRepo)
+
+	hunterRepo := repository.NewHunterRepository(db)
+	hunterService := service.NewHunterService(hunterRepo)
+
+	accessRequestRepo := repository.NewAccessRequestRepository(db)
+	accessRequestService := service.NewAccessRequestService(accessRequestRepo, hunterRepo, candidateRepo)
+
+	metricRepo := repository.NewMetricRepository(db)
+	metricService := service.NewMetricService(metricRepo)
+
 	authHandler := handler.NewAuthHandler(authService)
 	userHandler := handler.NewUserHandler(authService)
+	candidateHandler := handler.NewCandidateHandler(candidateService)
+	hunterHandler := handler.NewHunterHandler(hunterService)
+	accessRequestHandler := handler.NewAccessRequestHandler(accessRequestService)
+	metricHandler := handler.NewMetricHandler(metricService)
 	healthHandler := handler.NewHealthHandler()
 
 	// 4. Configurar roteador Chi e middlewares globais
@@ -98,6 +114,24 @@ func main() {
 			r.Route("/users", func(r chi.Router) {
 				r.Get("/me", userHandler.GetMe)
 			})
+
+			r.Get("/candidates", candidateHandler.List)
+			r.Get("/candidates/me", candidateHandler.GetMe)
+			r.Put("/candidates/me", candidateHandler.SaveMe)
+			r.Patch("/candidates/{id}", candidateHandler.SetApproval)
+
+			r.Get("/hunters", hunterHandler.List)
+			r.Get("/hunters/me", hunterHandler.GetMe)
+			r.Put("/hunters/me", hunterHandler.SaveMe)
+			r.Patch("/hunters/{id}/status", hunterHandler.SetStatus)
+			r.Post("/hunters/{id}/contacts", hunterHandler.IncrementContacts)
+
+			r.Get("/access-requests/me", accessRequestHandler.ListMe)
+			r.Post("/access-requests", accessRequestHandler.Send)
+			r.Patch("/access-requests/{id}", accessRequestHandler.Respond)
+
+			r.Get("/metrics", metricHandler.List)
+			r.Post("/metrics", metricHandler.Track)
 		})
 	})
 
