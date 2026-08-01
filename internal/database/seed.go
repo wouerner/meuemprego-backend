@@ -4,21 +4,71 @@ import (
 	"log"
 
 	"github.com/wouerner/runter-backend/internal/domain"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
+func userIDPtr(userIDs map[string]uint, email string) *uint {
+	if userIDs == nil {
+		return nil
+	}
+	id, ok := userIDs[email]
+	if !ok || id == 0 {
+		return nil
+	}
+	return &id
+}
+
 // SeedData popula o banco com dados de exemplo (idempotente: só insere se a tabela estiver vazia).
 func SeedData(db *gorm.DB) error {
-	if err := seedCandidates(db); err != nil {
+	userIDs, err := seedUsers(db)
+	if err != nil {
 		return err
 	}
-	if err := seedHunters(db); err != nil {
+	if err := seedCandidates(db, userIDs); err != nil {
+		return err
+	}
+	if err := seedHunters(db, userIDs); err != nil {
 		return err
 	}
 	return nil
 }
 
-func seedCandidates(db *gorm.DB) error {
+// DemoUser contém as credenciais das contas de demonstração criadas pelo seed.
+var DemoUsers = []domain.User{
+	{Name: "Administrador da Plataforma", Email: "admin@meuemprego.pro"},
+	{Name: "Carlos Eduardo", Email: "carlos@meuemprego.pro"},
+	{Name: "Juliana Mendes", Email: "juliana.hunter@meuemprego.pro"},
+}
+
+const DemoPassword = "password123"
+
+func seedUsers(db *gorm.DB) (map[string]uint, error) {
+	var count int64
+	if err := db.Model(&domain.User{}).Count(&count).Error; err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		return nil, nil
+	}
+
+	userIDs := make(map[string]uint, len(DemoUsers))
+	for _, u := range DemoUsers {
+		hashed, err := bcrypt.GenerateFromPassword([]byte(DemoPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		u.Password = string(hashed)
+		if err := db.Create(&u).Error; err != nil {
+			return nil, err
+		}
+		userIDs[u.Email] = u.ID
+	}
+	log.Printf("Seed: %d usuários de demonstração inseridos (senha: %s)", len(userIDs), DemoPassword)
+	return userIDs, nil
+}
+
+func seedCandidates(db *gorm.DB, userIDs map[string]uint) error {
 	var count int64
 	if err := db.Model(&domain.Candidate{}).Count(&count).Error; err != nil {
 		return err
@@ -32,6 +82,7 @@ func seedCandidates(db *gorm.DB) error {
 			Name:                 "Carlos Eduardo",
 			CPF:                  "529.982.247-25",
 			Email:                "carlos.eduardo@email.com",
+			UserID:               userIDPtr(userIDs, "carlos@meuemprego.pro"),
 			Avatar:               "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80",
 			Headline:             "Engenheiro de Software Senior | Fullstack (Vue.js, Node.js)",
 			Seniority:            "Senior",
@@ -117,7 +168,7 @@ func seedCandidates(db *gorm.DB) error {
 	return nil
 }
 
-func seedHunters(db *gorm.DB) error {
+func seedHunters(db *gorm.DB, userIDs map[string]uint) error {
 	var count int64
 	if err := db.Model(&domain.Hunter{}).Count(&count).Error; err != nil {
 		return err
@@ -131,6 +182,7 @@ func seedHunters(db *gorm.DB) error {
 			Name:               "Juliana Mendes",
 			CPF:                "987.654.321-09",
 			Email:              "juliana.mendes@career.com",
+			UserID:             userIDPtr(userIDs, "juliana.hunter@meuemprego.pro"),
 			Avatar:             "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=250&q=80",
 			Headline:           "Executive Headhunter & Coach de Carreira Tech",
 			Bio:                "Especialista em recolocação de executivos de TI, Tech Leads e Product Managers em grandes tech companies e startups globais.",

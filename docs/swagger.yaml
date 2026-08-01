@@ -1,5 +1,30 @@
 basePath: /api/v1
 definitions:
+  domain.AccessRequestResponseDTO:
+    properties:
+      candidate_id:
+        type: integer
+      hunter_avatar:
+        type: string
+      hunter_headline:
+        type: string
+      hunter_id:
+        type: integer
+      hunter_name:
+        type: string
+      hunter_specialties:
+        items:
+          type: string
+        type: array
+      id:
+        type: integer
+      message:
+        type: string
+      requested_at:
+        type: string
+      status:
+        type: string
+    type: object
   domain.AuthResponseDTO:
     properties:
       token:
@@ -7,11 +32,113 @@ definitions:
       user:
         $ref: '#/definitions/domain.User'
     type: object
+  domain.CandidateResponseDTO:
+    properties:
+      area:
+        type: string
+      avatar:
+        type: string
+      career_goal:
+        type: string
+      cpf:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      headline:
+        type: string
+      id:
+        type: integer
+      is_approved:
+        type: boolean
+      lgpd_consent:
+        type: boolean
+      linkedin_url:
+        type: string
+      name:
+        type: string
+      professional_moment:
+        type: string
+      request_hunter_contact:
+        type: boolean
+      seniority:
+        type: string
+      user_id:
+        type: integer
+      whatsapp_number:
+        type: string
+    type: object
+  domain.CreateAccessRequestDTO:
+    properties:
+      candidate_id:
+        type: integer
+      message:
+        type: string
+    type: object
+  domain.HunterResponseDTO:
+    properties:
+      avatar:
+        type: string
+      bio:
+        type: string
+      cpf:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      headline:
+        type: string
+      id:
+        type: integer
+      linkedin_url:
+        type: string
+      name:
+        type: string
+      rating:
+        type: number
+      seniorities_served:
+        items:
+          type: string
+        type: array
+      service_model:
+        type: string
+      specialties:
+        items:
+          type: string
+        type: array
+      status:
+        type: string
+      total_contacts_count:
+        type: integer
+      user_id:
+        type: integer
+      whatsapp_number:
+        type: string
+    type: object
   domain.LoginDTO:
     properties:
       email:
         type: string
       password:
+        type: string
+    type: object
+  domain.MetricEventResponseDTO:
+    properties:
+      channel:
+        type: string
+      id:
+        type: integer
+      initiated_by_role:
+        type: string
+      target_id:
+        type: string
+      target_name:
+        type: string
+      target_type:
+        type: string
+      timestamp:
         type: string
     type: object
   domain.RegisterDTO:
@@ -21,6 +148,86 @@ definitions:
       name:
         type: string
       password:
+        type: string
+    type: object
+  domain.RespondAccessRequestDTO:
+    properties:
+      status:
+        type: string
+    type: object
+  domain.SaveCandidateDTO:
+    properties:
+      area:
+        type: string
+      avatar:
+        type: string
+      career_goal:
+        type: string
+      cpf:
+        type: string
+      email:
+        type: string
+      headline:
+        type: string
+      lgpd_consent:
+        type: boolean
+      linkedin_url:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      professional_moment:
+        type: string
+      request_hunter_contact:
+        type: boolean
+      seniority:
+        type: string
+      whatsapp_number:
+        type: string
+    type: object
+  domain.SaveHunterDTO:
+    properties:
+      avatar:
+        type: string
+      bio:
+        type: string
+      cpf:
+        type: string
+      email:
+        type: string
+      headline:
+        type: string
+      linkedin_url:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      seniorities_served:
+        items:
+          type: string
+        type: array
+      service_model:
+        type: string
+      specialties:
+        items:
+          type: string
+        type: array
+      whatsapp_number:
+        type: string
+    type: object
+  domain.TrackMetricDTO:
+    properties:
+      channel:
+        type: string
+      initiated_by_role:
+        type: string
+      target_id:
+        type: string
+      target_name:
+        type: string
+      target_type:
         type: string
     type: object
   domain.User:
@@ -60,6 +267,133 @@ info:
   title: Runter Backend API
   version: "1.0"
 paths:
+  /access-requests:
+    post:
+      consumes:
+      - application/json
+      description: Envia uma solicitação de acesso de um job hunter (autenticado e
+        aprovado) para um candidato.
+      parameters:
+      - description: Dados da solicitação
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateAccessRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.AccessRequestResponseDTO'
+        "400":
+          description: Dados inválidos
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Hunter não aprovado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Perfil de hunter não encontrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Enviar solicitação de acesso
+      tags:
+      - Access Requests
+  /access-requests/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Aceita ou rejeita uma solicitação de acesso recebida pelo candidato
+        autenticado.
+      parameters:
+      - description: ID da solicitação
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Novo status (accepted/rejected)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.RespondAccessRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.AccessRequestResponseDTO'
+        "400":
+          description: Dados inválidos
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Solicitação não encontrada
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Responder solicitação de acesso
+      tags:
+      - Access Requests
+  /access-requests/me:
+    get:
+      description: Retorna a caixa de entrada de solicitações de acesso de job hunters
+        para o candidato autenticado.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.AccessRequestResponseDTO'
+            type: array
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Perfil de candidato não encontrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar solicitações de acesso do candidato
+      tags:
+      - Access Requests
   /auth/login:
     post:
       consumes:
@@ -141,6 +475,152 @@ paths:
       summary: Registrar novo usuário
       tags:
       - Autenticação
+  /candidates:
+    get:
+      description: Retorna a lista completa de candidatos cadastrados na plataforma.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.CandidateResponseDTO'
+            type: array
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar candidatos
+      tags:
+      - Candidatos
+  /candidates/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Altera o flag de aprovação de um candidato pelo ID.
+      parameters:
+      - description: ID do candidato
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Novo estado de aprovação (campo approved)
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: boolean
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.CandidateResponseDTO'
+        "400":
+          description: Dados inválidos
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Candidato não encontrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Aprovar/rejeitar candidato
+      tags:
+      - Candidatos
+  /candidates/me:
+    get:
+      description: Retorna o perfil de candidato vinculado ao usuário logado.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.CandidateResponseDTO'
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Perfil não encontrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obter perfil de candidato do usuário autenticado
+      tags:
+      - Candidatos
+    put:
+      consumes:
+      - application/json
+      description: Cria (upsert) o perfil de candidato vinculado ao usuário logado.
+      parameters:
+      - description: Dados do perfil de candidato
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.SaveCandidateDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.CandidateResponseDTO'
+        "400":
+          description: Dados inválidos
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: CPF já cadastrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Salvar perfil de candidato do usuário autenticado
+      tags:
+      - Candidatos
   /health:
     get:
       description: Retorna o status operacional da aplicação, timestamp UTC e versão
@@ -156,6 +636,252 @@ paths:
       summary: Healthcheck da API
       tags:
       - Saúde
+  /hunters:
+    get:
+      description: Retorna a lista completa de job hunters cadastrados na plataforma.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.HunterResponseDTO'
+            type: array
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar job hunters
+      tags:
+      - Hunters
+  /hunters/{id}/contacts:
+    post:
+      description: Incrementa o contador total de contatos realizados com um job hunter.
+      parameters:
+      - description: ID do job hunter
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.HunterResponseDTO'
+        "404":
+          description: Hunter não encontrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Incrementar contatos de job hunter
+      tags:
+      - Hunters
+  /hunters/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Altera o status (Pendente/Aprovado/Rejeitado) de um job hunter
+        pelo ID.
+      parameters:
+      - description: ID do job hunter
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Novo status (campo status)
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.HunterResponseDTO'
+        "400":
+          description: Dados inválidos
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Hunter não encontrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Aprovar/rejeitar job hunter
+      tags:
+      - Hunters
+  /hunters/me:
+    get:
+      description: Retorna o perfil de job hunter vinculado ao usuário logado.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.HunterResponseDTO'
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Perfil não encontrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obter perfil de job hunter do usuário autenticado
+      tags:
+      - Hunters
+    put:
+      consumes:
+      - application/json
+      description: Cria (upsert) o perfil de job hunter vinculado ao usuário logado.
+        Novos perfis nascem com status Pendente.
+      parameters:
+      - description: Dados do perfil de job hunter
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.SaveHunterDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.HunterResponseDTO'
+        "400":
+          description: Dados inválidos
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: CPF já cadastrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Salvar perfil de job hunter do usuário autenticado
+      tags:
+      - Hunters
+  /metrics:
+    get:
+      description: Retorna a lista completa de eventos de transbordo (cliques em WhatsApp/LinkedIn).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.MetricEventResponseDTO'
+            type: array
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Listar eventos de métricas
+      tags:
+      - Métricas
+    post:
+      consumes:
+      - application/json
+      description: Registra um clique em WhatsApp ou LinkedIn para as métricas da
+        plataforma.
+      parameters:
+      - description: Dados do evento
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.TrackMetricDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.MetricEventResponseDTO'
+        "400":
+          description: Dados inválidos
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Registrar evento de transbordo
+      tags:
+      - Métricas
   /users/me:
     get:
       description: Retorna as informações do usuário atual extraídas a partir do token
