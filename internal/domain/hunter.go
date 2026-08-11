@@ -6,25 +6,25 @@ import (
 )
 
 type Hunter struct {
-	ID                  uint      `gorm:"primaryKey" json:"id"`
-	UserID              *uint     `gorm:"index" json:"user_id"`
-	Name                string    `gorm:"size:120;not null" json:"name"`
-	CPF                 string    `gorm:"size:14;not null;uniqueIndex" json:"cpf"`
-	Email               string    `gorm:"size:100;not null" json:"email"`
-	Password            string    `gorm:"size:255" json:"-"`
-	Avatar              string    `gorm:"size:500" json:"avatar"`
-	Headline            string    `gorm:"size:255" json:"headline"`
-	Bio                 string    `gorm:"size:1000" json:"bio"`
-	Specialties         string    `gorm:"type:text" json:"-"`
-	SenioritiesServed   string    `gorm:"type:text" json:"-"`
-	ServiceModel        string    `gorm:"size:60;not null" json:"service_model"`
-	Status              string    `gorm:"size:20;not null;default:Pendente" json:"status"`
-	Rating              float64   `gorm:"default:0" json:"rating"`
-	TotalContactsCount  int       `gorm:"default:0" json:"total_contacts_count"`
-	LinkedInURL         string    `gorm:"size:500" json:"linkedin_url"`
-	WhatsAppNumber      string    `gorm:"size:20" json:"whatsapp_number"`
-	CreatedAt           time.Time `json:"created_at"`
-	UpdatedAt           time.Time `json:"updated_at"`
+	ID                 uint      `gorm:"primaryKey" json:"id"`
+	UserID             *uint     `gorm:"index" json:"user_id"`
+	Name               string    `gorm:"size:120;not null" json:"name"`
+	CPF                string    `gorm:"size:14;not null;uniqueIndex" json:"cpf"`
+	Email              string    `gorm:"size:100;not null" json:"email"`
+	Password           string    `gorm:"size:255" json:"-"`
+	Avatar             string    `gorm:"size:500" json:"avatar"`
+	Headline           string    `gorm:"size:255" json:"headline"`
+	Bio                string    `gorm:"size:1000" json:"bio"`
+	Specialties        string    `gorm:"type:text" json:"-"`
+	SenioritiesServed  string    `gorm:"type:text" json:"-"`
+	ServiceModel       string    `gorm:"size:60;not null" json:"service_model"`
+	Status             string    `gorm:"size:20;not null;default:Pendente" json:"status"`
+	Rating             float64   `gorm:"default:0" json:"rating"`
+	TotalContactsCount int       `gorm:"default:0" json:"total_contacts_count"`
+	LinkedInURL        string    `gorm:"size:500" json:"linkedin_url"`
+	WhatsAppNumber     string    `gorm:"size:20" json:"whatsapp_number"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 const (
@@ -34,18 +34,18 @@ const (
 )
 
 type SaveHunterDTO struct {
-	Name               string   `json:"name"`
-	CPF                string   `json:"cpf"`
-	Email              string   `json:"email"`
-	Password           string   `json:"password"`
-	Avatar             string   `json:"avatar"`
-	Headline           string   `json:"headline"`
-	Bio                string   `json:"bio"`
-	Specialties        []string `json:"specialties"`
-	SenioritiesServed  []string `json:"seniorities_served"`
-	ServiceModel       string   `json:"service_model"`
-	LinkedInURL        string   `json:"linkedin_url"`
-	WhatsAppNumber     string   `json:"whatsapp_number"`
+	Name              string   `json:"name"`
+	CPF               string   `json:"cpf"`
+	Email             string   `json:"email"`
+	Password          string   `json:"password"`
+	Avatar            string   `json:"avatar"`
+	Headline          string   `json:"headline"`
+	Bio               string   `json:"bio"`
+	Specialties       []string `json:"specialties"`
+	SenioritiesServed []string `json:"seniorities_served"`
+	ServiceModel      string   `json:"service_model"`
+	LinkedInURL       string   `json:"linkedin_url"`
+	WhatsAppNumber    string   `json:"whatsapp_number"`
 }
 
 type HunterResponseDTO struct {

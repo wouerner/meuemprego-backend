@@ -49,9 +49,38 @@ func (h *AccessRequestHandler) ListMe(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, requests)
 }
 
+// ListSent retorna as solicitações de acesso enviadas pelo job hunter autenticado
+// @Summary      Listar solicitações de acesso enviadas pelo hunter
+// @Description  Retorna todas as solicitações de acesso enviadas pelo job hunter autenticado, com seus status (pending/accepted/rejected).
+// @Tags         Access Requests
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {array}   domain.AccessRequestResponseDTO
+// @Failure      401  {object}  map[string]string "Não autorizado"
+// @Failure      404  {object}  map[string]string "Perfil de hunter não encontrado"
+// @Router       /access-requests/sent [get]
+func (h *AccessRequestHandler) ListSent(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userIDFromContext(r)
+	if !ok {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "Usuário não autenticado"})
+		return
+	}
+
+	requests, err := h.accessRequestService.ListForHunter(userID)
+	if err != nil {
+		if errors.Is(err, service.ErrHunterProfileMissing) {
+			respondJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+			return
+		}
+		respondJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erro interno do servidor"})
+		return
+	}
+	respondJSON(w, http.StatusOK, requests)
+}
+
 // Send cria uma solicitação de acesso de um job hunter aprovado para um candidato
 // @Summary      Enviar solicitação de acesso
-// @Description  Envia uma solicitação de acesso de um job hunter (autenticado e aprovado) para um candidato.
+// @Description  Envia uma solicitação de acesso de um job hunter (autenticado e aprovado) para um candidato. Limite de 5 solicitações por mês.
 // @Tags         Access Requests
 // @Accept       json
 // @Produce      json
@@ -61,6 +90,7 @@ func (h *AccessRequestHandler) ListMe(w http.ResponseWriter, r *http.Request) {
 // @Failure      400  {object}  map[string]string "Dados inválidos"
 // @Failure      403  {object}  map[string]string "Hunter não aprovado"
 // @Failure      404  {object}  map[string]string "Perfil de hunter não encontrado"
+// @Failure      429  {object}  map[string]string "Limite mensal de solicitações atingido"
 // @Failure      500  {object}  map[string]string "Erro interno do servidor"
 // @Router       /access-requests [post]
 func (h *AccessRequestHandler) Send(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +118,10 @@ func (h *AccessRequestHandler) Send(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, service.ErrHunterNotApproved) {
 			respondJSON(w, http.StatusForbidden, map[string]string{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, service.ErrAccessRequestLimitReached) {
+			respondJSON(w, http.StatusTooManyRequests, map[string]string{"error": err.Error()})
 			return
 		}
 		respondJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erro interno do servidor"})

@@ -31,6 +31,9 @@ func SeedData(db *gorm.DB) error {
 	if err := seedHunters(db, userIDs); err != nil {
 		return err
 	}
+	if err := seedAccessRequests(db); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -266,4 +269,74 @@ func seedHunters(db *gorm.DB, userIDs map[string]uint) error {
 	}
 	log.Printf("Seed: %d job hunters de exemplo inseridos", len(hunters))
 	return nil
+}
+
+func seedAccessRequests(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&domain.AccessRequest{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	var candidate domain.Candidate
+	if err := db.Where("email = ?", "carlos.eduardo@email.com").First(&candidate).Error; err != nil {
+		log.Printf("Seed: candidato de demonstração não encontrado, pulando pedidos de acesso: %v", err)
+		return nil
+	}
+
+	huntersByEmail := map[string]string{
+		"Juliana Mendes":     "juliana.mendes@career.com",
+		"Roberto Andrade":    "roberto.andrade@huntcareers.com",
+		"Camila Vasconcelos": "camila.v@jobhunter.io",
+		"Fernando Garcia":    "fernando.garcia@talentconsulting.com",
+	}
+
+	requests := []domain.AccessRequest{}
+	for name, email := range huntersByEmail {
+		var hunter domain.Hunter
+		if err := db.Where("email = ?", email).First(&hunter).Error; err != nil {
+			log.Printf("Seed: hunter %s não encontrado, pulando pedido de acesso: %v", name, err)
+			continue
+		}
+		requests = append(requests, domain.AccessRequest{
+			HunterID:    hunter.ID,
+			CandidateID: candidate.ID,
+			Message:     accessRequestMessageFor(name),
+			Status:      domain.AccessRequestPending,
+		})
+	}
+
+	if len(requests) == 0 {
+		return nil
+	}
+
+	// Juliana (conta hunter de demonstração) já teve o acesso aceito pelo candidato,
+	// liberando o WhatsApp; os demais seguem pendentes (apenas LinkedIn visível).
+	var julianaHunter domain.Hunter
+	if err := db.Where("email = ?", "juliana.mendes@career.com").First(&julianaHunter).Error; err == nil {
+		for i := range requests {
+			if requests[i].HunterID == julianaHunter.ID {
+				requests[i].Status = domain.AccessRequestAccepted
+				break
+			}
+		}
+	}
+
+	if err := db.Create(&requests).Error; err != nil {
+		return err
+	}
+	log.Printf("Seed: %d pedidos de acesso inseridos para o candidato de demonstração", len(requests))
+	return nil
+}
+
+func accessRequestMessageFor(hunterName string) string {
+	messages := map[string]string{
+		"Juliana Mendes":     "Olá Carlos! Vi seu perfil na vitrine e seu objetivo de transição para Tech Lead me chamou atenção. Atendo executivos de TI e posso te apoiar em oportunidades senior/staff em tech companies globais. Podemos conversar?",
+		"Roberto Andrade":    "Olá! Sou especializado em recolocação para o mercado financeiro e tech. Seu perfil fullstack com foco em liderança combina com demandas que estou atendendo agora. Aceita uma conversa rápida?",
+		"Camila Vasconcelos": "Oi Carlos, tudo bem? Trabalho com profissionais que buscam vagas internacionais remotas. Seu perfil de engenharia é forte para o mercado exterior — posso te conectar com oportunidades pagas em dólar.",
+		"Fernando Garcia":    "Olá Carlos! Sou headhunter para as áreas de RH e Operações, mas atendo executivos de TI em transição. Seu perfil de liderança técnica pode ser interessante para uma posição que estou trabalhando. Meu LinkedIn já está disponível para você conferir minha atuação.",
+	}
+	return messages[hunterName]
 }

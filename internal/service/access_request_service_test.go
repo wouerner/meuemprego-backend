@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -39,6 +40,22 @@ func (m *MockAccessRequestRepository) FindByCandidateID(candidateID uint) ([]dom
 	return args.Get(0).([]domain.AccessRequest), args.Error(1)
 }
 
+func (m *MockAccessRequestRepository) FindByHunterID(hunterID uint) ([]domain.AccessRequest, error) {
+	args := m.Called(hunterID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.AccessRequest), args.Error(1)
+}
+
+func (m *MockAccessRequestRepository) CountByHunterIDSince(hunterID uint, since time.Time) (int64, error) {
+	args := m.Called(hunterID, since)
+	if v := args.Get(0); v != nil {
+		return v.(int64), args.Error(1)
+	}
+	return 0, nil
+}
+
 func (m *MockAccessRequestRepository) Update(request *domain.AccessRequest) error {
 	args := m.Called(request)
 	return args.Error(0)
@@ -73,6 +90,7 @@ func TestAccessRequestService_Send_Success(t *testing.T) {
 	}
 	hunterRepo.On("FindByUserID", uint(1)).Return(hunter, nil)
 	hunterRepo.On("FindByID", uint(1)).Return(hunter, nil)
+	requestRepo.On("CountByHunterIDSince", uint(1), mock.AnythingOfType("time.Time")).Return(int64(0), nil)
 	requestRepo.On("Create", mock.AnythingOfType("*domain.AccessRequest")).Return(nil)
 
 	res, err := svc.Send(1, domain.CreateAccessRequestDTO{CandidateID: 5, Message: "Olá!"})
@@ -96,6 +114,24 @@ func TestAccessRequestService_Send_InvalidInput(t *testing.T) {
 	assert.ErrorIs(t, err, service.ErrInvalidAccessRequest)
 	assert.Nil(t, res)
 	hunterRepo.AssertNotCalled(t, "FindByUserID", mock.Anything)
+}
+
+func TestAccessRequestService_Send_RejectsWhenMonthlyLimitReached(t *testing.T) {
+	requestRepo := new(MockAccessRequestRepository)
+	hunterRepo := new(MockHunterRepository)
+	candidateRepo := new(MockCandidateRepository)
+	svc := service.NewAccessRequestService(requestRepo, hunterRepo, candidateRepo)
+
+	hunter := &domain.Hunter{ID: 1, UserID: uintPointer(1), Status: domain.HunterStatusAprovado}
+	hunterRepo.On("FindByUserID", uint(1)).Return(hunter, nil)
+	requestRepo.On("CountByHunterIDSince", uint(1), mock.AnythingOfType("time.Time")).
+		Return(int64(service.MaxAccessRequestsPerMonth), nil)
+
+	res, err := svc.Send(1, domain.CreateAccessRequestDTO{CandidateID: 5, Message: "Olá!"})
+
+	assert.ErrorIs(t, err, service.ErrAccessRequestLimitReached)
+	assert.Nil(t, res)
+	requestRepo.AssertNotCalled(t, "Create", mock.Anything)
 }
 
 func TestAccessRequestService_ListForCandidate_NoProfile(t *testing.T) {

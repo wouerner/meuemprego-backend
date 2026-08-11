@@ -2,29 +2,34 @@ package service
 
 import (
 	"errors"
+	"time"
 
 	"github.com/wouerner/runter-backend/internal/domain"
 	"github.com/wouerner/runter-backend/internal/repository"
 )
 
+const MaxAccessRequestsPerMonth = 5
+
 var (
-	ErrHunterNotApproved       = errors.New("seu perfil precisa ser aprovado pelo administrador antes de enviar solicitações de acesso aos candidatos")
-	ErrCandidateProfileMissing = errors.New("perfil de candidato não encontrado para o usuário autenticado")
-	ErrHunterProfileMissing    = errors.New("perfil de job hunter não encontrado para o usuário autenticado")
-	ErrInvalidAccessRequest    = errors.New("solicitação de acesso inválida")
-	ErrInvalidRequestStatus    = errors.New("status inválido para a solicitação de acesso")
+	ErrHunterNotApproved         = errors.New("seu perfil precisa ser aprovado pelo administrador antes de enviar solicitações de acesso aos candidatos")
+	ErrCandidateProfileMissing   = errors.New("perfil de candidato não encontrado para o usuário autenticado")
+	ErrHunterProfileMissing      = errors.New("perfil de job hunter não encontrado para o usuário autenticado")
+	ErrInvalidAccessRequest      = errors.New("solicitação de acesso inválida")
+	ErrInvalidRequestStatus      = errors.New("status inválido para a solicitação de acesso")
+	ErrAccessRequestLimitReached = errors.New("limite de 5 solicitações de acesso por mês atingido")
 )
 
 type AccessRequestService interface {
 	Send(userID uint, dto domain.CreateAccessRequestDTO) (*domain.AccessRequestResponseDTO, error)
 	ListForCandidate(userID uint) ([]domain.AccessRequestResponseDTO, error)
+	ListForHunter(userID uint) ([]domain.AccessRequestResponseDTO, error)
 	Respond(userID uint, id uint, status string) (*domain.AccessRequestResponseDTO, error)
 }
 
 type accessRequestService struct {
-	requestRepo    repository.AccessRequestRepository
-	hunterRepo     repository.HunterRepository
-	candidateRepo  repository.CandidateRepository
+	requestRepo   repository.AccessRequestRepository
+	hunterRepo    repository.HunterRepository
+	candidateRepo repository.CandidateRepository
 }
 
 func NewAccessRequestService(
@@ -74,6 +79,16 @@ func (s *accessRequestService) Send(userID uint, dto domain.CreateAccessRequestD
 		return nil, ErrHunterNotApproved
 	}
 
+	now := time.Now()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	sentThisMonth, err := s.requestRepo.CountByHunterIDSince(hunter.ID, monthStart)
+	if err != nil {
+		return nil, err
+	}
+	if sentThisMonth >= MaxAccessRequestsPerMonth {
+		return nil, ErrAccessRequestLimitReached
+	}
+
 	req := &domain.AccessRequest{
 		HunterID:    hunter.ID,
 		CandidateID: dto.CandidateID,
@@ -94,6 +109,28 @@ func (s *accessRequestService) ListForCandidate(userID uint) ([]domain.AccessReq
 	}
 
 	requests, err := s.requestRepo.FindByCandidateID(candidate.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	dtos := make([]domain.AccessRequestResponseDTO, 0, len(requests))
+	for i := range requests {
+		res, err := s.toResponse(&requests[i])
+		if err != nil {
+			return nil, err
+		}
+		dtos = append(dtos, *res)
+	}
+	return dtos, nil
+}
+
+func (s *accessRequestService) ListForHunter(userID uint) ([]domain.AccessRequestResponseDTO, error) {
+	hunter, err := s.hunterRepo.FindByUserID(userID)
+	if err != nil {
+		return nil, ErrHunterProfileMissing
+	}
+
+	requests, err := s.requestRepo.FindByHunterID(hunter.ID)
 	if err != nil {
 		return nil, err
 	}

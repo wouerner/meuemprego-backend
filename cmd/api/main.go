@@ -84,7 +84,7 @@ func main() {
 	// Configuração de CORS
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
@@ -127,6 +127,7 @@ func main() {
 			r.Post("/hunters/{id}/contacts", hunterHandler.IncrementContacts)
 
 			r.Get("/access-requests/me", accessRequestHandler.ListMe)
+			r.Get("/access-requests/sent", accessRequestHandler.ListSent)
 			r.Post("/access-requests", accessRequestHandler.Send)
 			r.Patch("/access-requests/{id}", accessRequestHandler.Respond)
 
